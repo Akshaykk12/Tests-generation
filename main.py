@@ -11,30 +11,25 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("API_KEY"))
 
-# Initialize EasyOCR Reader
 reader = easyocr.Reader(['en'])
 
-# Load the BLIP model and processor
 @st.cache_resource
 def load_blip_model():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
     return processor, model
 
-# Function to generate image caption
 def generate_image_caption(image):
     inputs = blip_processor(images=image, return_tensors="pt")
     caption_ids = blip_model.generate(**inputs)
     caption = blip_processor.decode(caption_ids[0], skip_special_tokens=True)
     return caption
 
-# Function to combine image caption and optional context
 def combine_input(image_caption, optional_text=None):
     if optional_text:
         return f"Image Description: {image_caption}. Context: {optional_text}."
     return f"Image Description: {image_caption}."
 
-# Function to create a structured prompt with an example
 def create_prompt_with_example(image_caption, optional_text):
     example = """
     Example:
@@ -69,43 +64,33 @@ The correct total price is displayed.
 
     Image Description: {image_caption}
     Context: {optional_text}
-    Use Buttons o
 
     Test Case:
     """
     return prompt
 
-# Function to generate test instructions using Flan-T5
 def generate_test_instructions_flant5(input_text):
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(input_text)
     return response.text
 
-# Function to perform OCR using EasyOCR
 def perform_ocr(image):
     image_np = np.array(image)
     results = reader.readtext(image_np)
     text = ' '.join([result[1] for result in results])
     return text
 
-# Streamlit UI
 st.title("AI-Powered Test Case Generator")
 
-# Upload image
 uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
 blip_processor, blip_model = load_blip_model()
 
 if uploaded_image:
-    # Display the uploaded image
     image = Image.open(uploaded_image)
 
     st.image(image, caption="Uploaded Image", use_column_width=True)
     optional_text = st.text_input("Enter optional context")
-    # Perform OCR
-
-    # Input optional context
-
-    # Generate image caption
+    
     if st.button("Generate Testcase"):
         ocr_text = perform_ocr(image)
         caption = generate_image_caption(image)
